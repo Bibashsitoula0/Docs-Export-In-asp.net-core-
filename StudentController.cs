@@ -1,40 +1,8 @@
-﻿using Api.Models;
-using System.Web;
-using AutoMapper;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using UGC.DAL.CommonRepository;
-using UGC.DAL;
-using UGC.Service.AccountService;
-using UGC.Service.CurrentUserService;
-using UGC.Service.StudentService;
+
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using UGC.Model;
-using System.Data;
-using Api.Helpers;
 using OfficeOpenXml;
-using Microsoft.AspNetCore.Hosting.Server;
-using UGC.Service.OTPService;
-using System.Net.Mime;
-using System.Text;
-using System.IO;
-using static System.Net.WebRequestMethods;
-using System.IO.Pipes;
-using System.Runtime.CompilerServices;
-using System.Web.Http.Filters;
-using Microsoft.AspNetCore.Authorization;
-using static System.Collections.Specialized.BitVector32;
-using Syncfusion.DocIO.DLS;
-using Syncfusion.DocIO;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-using DocumentFormat.OpenXml;
-using System.Reflection.Metadata;
-using DocumentFormat.OpenXml.InkML;
-using Document = DocumentFormat.OpenXml.Wordprocessing.Document;
-using System.IO.Pipelines;
 using System;
 
 namespace Api.Controllers
@@ -52,229 +20,29 @@ namespace Api.Controllers
         {
             _studentService = studentService;
             _hostingEnvironment = hostingEnvironment;
-        }
-
-        [HttpGet]
-        [Authorize]
-        [Route("GetAllStudent")]
-        public async Task<IActionResult> GetAllStudent(int? pageNumber, int? pageSize)
-        {
-            try
-            {
-                if (pageNumber == null || pageSize == null)
-                {
-                    pageNumber = 1;
-                    pageSize = 2;
-                    var data = await _studentService.GetStudent(pageNumber, pageSize);
-
-                    return Ok(new ResponseModel
-                    {
-                        success = true,
-                        message = "success",
-                        data = data
-                    });
-                }
-                else
-                {
-                    var data = await _studentService.GetStudent(pageNumber, pageSize);
-                    return Ok(new ResponseModel
-                    {
-                        success = true,
-                        message = "success",
-                        data = data
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                return Ok(new ResponseModel { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpGet]
-        [Route("GetStudentById")]
-        public async Task<IActionResult> GetStudentById(int Id)
-        {
-            try
-            {
-                var data = await _studentService.GetStudentById(Id);
-                return Ok(new ResponseModel
-                {
-                    statuscode = 1,
-                    success = true,
-                    message = "success",
-                    data = data
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new ResponseModel { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpPost]
-        [Route("CreateStudent")]
-        public async Task<IActionResult> CreateStudent(StudentVm model)
-        {
-            try
-            {
-                var data = new StudentNeb()
-                {
-                    mobile_no = model.mobile_no,
-                    neb_id = model.neb_id,
-                    full_name = model.student_name
-                };
-                var result = await _studentService.Create(data);
-                return Ok(new ResponseModel
-                {
-                    statuscode = 1,
-                    success = true,
-                    message = "New Student Created",
-                    data = data
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new ResponseModel { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpPut]
-        [Route("UpdateStudent")]
-        public async Task<IActionResult> UpdateStudent(StudentNeb model)
-        {
-            try
-            {
-                var result = await _studentService.UpdateStudent(model);
-                return Ok(new ResponseModel
-                {
-                    statuscode = 1,
-                    success = true,
-                    message = "Student Data Updated",
-                    data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new ResponseModel { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpDelete]
-        [Route("DeleteStudent")]
-        public async Task<IActionResult> DeleteStudent(StudentNeb model)
-        {
-            try
-            {
-                var result = await _studentService.DeleteStudent(model);
-                return Ok(new ResponseModel
-                {
-                    statuscode = 1,
-                    success = true,
-                    message = $"The {model.full_name} student is deleted ",
-                    data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new ResponseModel { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpGet]
-        [Route("Export")]
-        public async Task<ActionResult> StudentRecordExports()
-        {
-            var data = await _studentService.GetStudentListInExcel();
-            DataTable datatable = new DataTable();
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            datatable.Columns.Add("Id");
-            datatable.Columns.Add("Neb Id");
-            datatable.Columns.Add("Student Name");
-            datatable.Columns.Add("Mobile");
-            datatable.Columns.Add("Email");
-            for (int i = 0; i < data.Count; i++)
-            {
-                datatable.Rows.Add(
-                       data[i].id,
-                       data[i].neb_id,
-                       data[i].full_name,
-                       data[i].mobile_no,
-                       data[i].email
-                    );
-            }
-            var heading = "UGC (Student List)";
-            var heading1 = "UGC (STUDENT)";
-            var heading2 = "Fiscal Year :" + DateTime.Now.ToString("y");
-            var heading3 = "Generated on :" + DateTime.Now.ToString("M/d/yyyy");
-
-
-
-            byte[] filecontent = ExcelExportHelper.ExportExcel(datatable, heading, heading1, heading2, heading3, true);
-
-            return File(filecontent, ExcelExportHelper.ExcelContentType, "Student Record.xlsx");
-        }
-
-        [Route("Excelupload")]
-        [HttpPost]
-        public ActionResult ExcelUpload(IFormFile file)
-        {
-            try
-            {
-                string pathToExcelFile = "";
-                if (file != null)
-                {
-                    if (file.ContentType == "application/vnd.ms-excel" || file.ContentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || file.ContentType == "application/vnd.ms-excel.sheet.macroEnabled.12")
-                    {
-                        string filename = file.FileName;
-                        string path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "Attachments"));
-                        using (var fileStream = new FileStream(Path.Combine(path, filename), FileMode.Create))
-                        {
-                            file.CopyToAsync(fileStream);
-                        }
-                        pathToExcelFile = Path.Combine(path, filename);
-                        var res = _studentService.UploadExcel(pathToExcelFile);
-                    }
-                    else
-                        return this.Failed("File format not supported !!");
-                }
-                return this.Failed("File Uploaded Sucessfully");
-            }
-            catch (Exception ex)
-            {
-                return this.Failed(ex.Message);
-            }
-        }
-        protected ActionResult Failed(string message)
-        {
-            return this.Content(message, MediaTypeNames.Text.Plain, Encoding.UTF8);
-        }
+        }      
 
         [HttpGet]
         public IActionResult CreateDocument()
         {
-            //create stream
+            
                 MemoryStream mem = new MemoryStream();                         
                using (WordprocessingDocument wordDocument =
                     WordprocessingDocument.Create(mem, WordprocessingDocumentType.Document, true))
                     {
                         MainDocumentPart mainPart = wordDocument.AddMainDocumentPart();
-
-                        // Create the document structure.  
                         mainPart.Document = new Document();
                         Body body = mainPart.Document.AppendChild(new Body());
                         Paragraph para = body.AppendChild(new Paragraph());
                         Run run = para.AppendChild(new Run());
                         run.AppendChild(new Text("Hello, World!"));
-
-                         mainPart.Document.Save();
-                           wordDocument.Close();
-
-                       mem.Position = 0;                
+                        mainPart.Document.Save();
+                        wordDocument.Close();
+                        mem.Position = 0;               
                            
                     }
                return File(mem, "application/msword", "Sample.docx");
         }
-        }
+      }
     }
 
